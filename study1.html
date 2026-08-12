@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>研究一</title>
+    <!-- 加载 JATOS 脚本（MindProbe 适配） -->
+    <script src="https://jatos.mindprobe.eu/assets/javascripts/jatos.js"></script>
+    <!-- 加载 jsPsych 核心库 -->
+    <script src="https://unpkg.com/jspsych@8.3.0/dist/index.browser.js"></script>
+    <!-- 加载所需插件 -->
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3/dist/index.browser.js"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3/dist/index.browser.js"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-multi-choice@1.1.3/dist/index.browser.js"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.1.3/dist/index.browser.js"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-text@1.1.3/dist/index.browser.js"></script>
+    <link href="https://unpkg.com/jspsych@8.3.0/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <style>
+        .jspsych-btn {
+            font-size: 18px !important;
+            padding: 10px 30px !important;
+        }
+        .jspsych-survey-multi-choice-question .required {
+            display: none !important;
+        }
+        .jspsych-survey-text-question .required {
+            display: none !important;
+        }
+        .custom-textarea {
+            width: 100%;
+            max-width: 600px;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+            margin: 8px 0 4px 0;
+            box-sizing: border-box;
+        }
+        .custom-textarea:focus {
+            border-color: #4a90d9;
+            outline: none;
+        }
+        .char-count-display {
+            font-size: 14px;
+            color: #000;
+            text-align: right;
+            margin: 4px 0 16px 0;
+            max-width: 600px;
+        }
+        .question-label {
+            font-size: 18px;
+            font-weight: 500;
+            margin-top: 20px;
+        }
+        .error-msg {
+            color: red;
+            font-size: 16px;
+            margin-top: 10px;
+            display: none;
+            background: #ffeeee;
+            padding: 10px;
+            border-radius: 6px;
+            max-width: 600px;
+        }
+        #submitBtn {
+            margin-top: 10px;
+        }
+        .jspsych-survey-likert-statement {
+            margin-bottom: 0.5em;
+        }
+        .feedback-text {
+            font-size: 48px;
+            color: black;
+            font-weight: bold;
+        }
+        .slider-container {
+            max-width: 600px;
+            margin: 20px auto;
+            text-align: center;
+        }
+        .slider-container input[type="range"] {
+            width: 100%;
+            max-width: 500px;
+            margin: 20px 0;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            outline: none;
+        }
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4a90d9;
+            cursor: pointer;
+        }
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4a90d9;
+            cursor: pointer;
+            border: none;
+        }
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            max-width: 500px;
+            margin: 0 auto;
+            font-size: 14px;
+            color: #555;
+        }
+        .slider-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4a90d9;
+            margin: 10px 0;
+        }
+        .dictator-instruction {
+            text-align: left;
+            max-width: 650px;
+            margin: 0 auto;
+            font-size: 18px;
+            line-height: 1.8;
+        }
+        .dictator-instruction p {
+            margin: 12px 0;
+        }
+        .dictator-instruction strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // ============================================================
+        // 工具函数：统计中文字符（只算汉字）
+        // ============================================================
+        function countChineseChars(str) {
+            if (!str) return 0;
+            const matches = str.match(/[\u4e00-\u9fa5]/g);
+            return matches ? matches.length : 0;
+        }
+
+        // ============================================================
+        // 1. 初始化 jsPsych（JATOS 适配版）
+        // ============================================================
+        const jsPsych = initJsPsych({
+            on_finish: function() {
+                // 1. 获取数据，转换成 JSON 格式
+                var resultJson = jsPsych.data.get().json();
+                // 2. 将数据提交给 JATOS
+                jatos.submitResultData(resultJson, jatos.startNextComponent);
+                // 3. 在页面上显示实验结束信息
+                document.body.innerHTML = '<h2>实验结束，感谢您的参与！</h2><p>数据已自动保存，请关闭页面。</p>';
+            }
+        });
+
+        // ============================================================
+        // 2. 随机分组
+        // ============================================================
+        const groupAssignments = [
+            { condition: 'death', stroopDifficulty: 'high' },
+            { condition: 'death', stroopDifficulty: 'low' },
+            { condition: 'tooth', stroopDifficulty: 'high' },
+            { condition: 'tooth', stroopDifficulty: 'low' }
+        ];
+        const assignedGroup = jsPsych.randomization.sampleWithoutReplacement(groupAssignments, 1)[0];
+        const isDeathGroup = assignedGroup.condition === 'death';
+        const isHighLoss = assignedGroup.stroopDifficulty === 'high';
+
+        jsPsych.data.addProperties({
+            condition: assignedGroup.condition,
+            stroopDifficulty: assignedGroup.stroopDifficulty
+        });
+
+        console.log('当前被试分组：', assignedGroup);
+
+        // ============================================================
+        // 3. 定义所有试次
+        // ============================================================
+
+        const buttonHtmlTemplate = ['<button class="jspsych-btn">%choice%</button>'];
+
+        // ---------- 3.1 知情同意 ----------
+        const trial_consent = {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `
+                <div style="text-align: left; max-width: 700px; margin: 0 auto; font-size: 18px; line-height: 1.8;">
+                    <h2 style="text-align:center;">知情同意书</h2>
+                    <p>您好！欢迎参与本实验。</p>
+                    <p>本研究所有数据仅用于学术研究，严格保密。</p>
+                    <p style="color: black;">您可以在任何时候退出问卷，无需任何理由。</p>
+                    <p style="color: black;">如有任何疑问，请联系主试：18757435692</p>
+                    <p style="font-weight: bold; margin-top: 20px; text-align:center;">如果您已阅读并同意上述内容，请点击下方按钮继续。</p>
+                </div>
+            `,
+            choices: ['继续'],
+            button_html: buttonHtmlTemplate
+        };
+
+        // ---------- 3.2 人口学变量 ----------
+        const trial_demographics = {
+            type: jsPsychSurveyMultiChoice,
+            questions: [
+                { prompt: '1. 您的性别：', name: 'gender', options: ['男', '女'], required: true },
+                { prompt: '2. 您的年龄：', name: 'age', options: ['18岁以下', '18-25岁', '26-35岁', '36-45岁', '46-55岁', '56岁以上'], required: true },
+                { prompt: '3. 您的受教育程度（最高学历）：', name: 'education', options: ['初中及以下', '高中/中专/职高', '大专', '本科', '硕士及以上'], required: true },
+                { prompt: '4. 请问您18岁以前，大部分时间长期生活、成长的地方是：', name: 'hometown', options: ['农村或乡镇', '县城、地级市或以上城市'], required: true },
+                { prompt: '5. 请问您个人的月均可支配金额大概是多少？（您每月实际可自由支配的收入/生活费总额）', name: 'monthly_income', options: ['1000元及以下', '1001-3000元', '3001-5000元', '5001-8000元', '8001-10000元', '10001-15000元', '15001元及以上'], required: true }
+            ],
+            button_label: '提交'
+        };
+
+        // ---------- 3.2.5 支付宝绑定手机号（自定义验证） ----------
+        const trial_alipay = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <div style="max-width: 500px; margin: 0 auto; text-align: left;">
+                    <p style="font-size: 18px;">请填写您支付宝绑定的手机号（用于发放报酬）：</p>
+                    <input type="text" id="alipayInput" placeholder="请输入11位手机号" style="width: 100%; padding: 10px; font-size: 18px; border: 2px solid #ccc; border-radius: 6px; box-sizing: border-box;">
+                    <div id="alipayError" style="color: red; font-size: 16px; margin-top: 10px; display: none;">请输入有效的11位手机号码（仅数字）。</div>
+                    <button id="alipaySubmitBtn" class="jspsych-btn" style="margin-top: 20px; width: 100%;">提交</button>
+                </div>
+            `,
+            choices: [],
+            on_load: function() {
+                const input = document.getElementById('alipayInput');
+                const errorDiv = document.getElementById('alipayError');
+                const submitBtn = document.getElementById('alipaySubmitBtn');
+
+                submitBtn.addEventListener('click', function() {
+                    const phone = input.value.trim();
+                    if (!/^\d{11}$/.test(phone)) {
+                        errorDiv.style.display = 'block';
+                        errorDiv.textContent = '请输入有效的11位手机号码（仅数字）。';
+                        return;
+                    }
+                    jsPsych.data.addProperties({
+                        alipay_phone: phone
+                    });
+                    errorDiv.style.display = 'none';
+                    jsPsych.finishTrial();
+                });
+
+                input.addEventListener('input', function() {
+                    errorDiv.style.display = 'none';
+                });
+            }
+        };
+
+        // ---------- 3.3 实验开始提醒 ----------
+        const trial_start_reminder = {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `
+                <div style="text-align: center; font-size: 24px; line-height: 2;">
+                    <p>基本信息已填写完毕。</p>
+                    <p>接下来将正式开始实验任务。</p>
+                    <p style="font-size: 18px; color: #666;">请保持专注，点击下方按钮继续。</p>
+                </div>
+            `,
+            choices: ['继续'],
+            button_html: buttonHtmlTemplate
+        };
+
+        // ---------- 3.4 死亡凸显 / 牙痛 启动任务 ----------
+        const topic = isDeathGroup ? '死亡' : '牙痛';
+        const question1 = isDeathGroup
+            ? '请简要描述当想到"自己死亡"时你的想法和心情（请回答100字左右）：'
+            : '请简要描述当想到"自己牙痛"时你的想法和心情（请回答100字左右）：';
+        const question2 = isDeathGroup
+            ? '请根据你的直觉，具体描述"在死亡过程中，你身体的感受"以及"当死亡后，你身体的变化"（请回答100字左右）：'
+            : '请根据你的直觉，具体描述"在牙痛过程中，你身体的感受"以及"当牙痛时，你身体的变化"（请回答100字左右）：';
+
+        const trial_mortalityPrime = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <div style="max-width: 650px; margin: 0 auto; text-align: left;">
+                    <p style="font-size:18px; color:#333;"><strong>任务说明：</strong>请认真想象并回答以下关于${topic}的问题。</p>
+                    <div class="question-label">${question1}</div>
+                    <textarea id="q1" class="custom-textarea" placeholder="请输入您的回答..."></textarea>
+                    <div id="count1" class="char-count-display">中文字数：0</div>
+                    <div class="question-label">${question2}</div>
+                    <textarea id="q2" class="custom-textarea" placeholder="请输入您的回答..."></textarea>
+                    <div id="count2" class="char-count-display">中文字数：0</div>
+                    <div id="errorMsg" class="error-msg"></div>
+                    <button id="submitBtn" class="jspsych-btn">提交</button>
+                </div>
+            `,
+            choices: [],
+            on_load: function() {
+                const q1 = document.getElementById('q1');
+                const q2 = document.getElementById('q2');
+                const count1 = document.getElementById('count1');
+                const count2 = document.getElementById('count2');
+                const errorMsg = document.getElementById('errorMsg');
+                const submitBtn = document.getElementById('submitBtn');
+
+                function updateCounts() {
+                    const c1 = countChineseChars(q1.value);
+                    const c2 = countChineseChars(q2.value);
+                    count1.textContent = `中文字数：${c1}`;
+                    count2.textContent = `中文字数：${c2}`;
+                    errorMsg.style.display = 'none';
+                }
+
+                q1.addEventListener('input', updateCounts);
+                q2.addEventListener('input', updateCounts);
+                updateCounts();
+
+                submitBtn.addEventListener('click', function() {
+                    const c1 = countChineseChars(q1.value);
+                    const c2 = countChineseChars(q2.value);
+                    if (c1 < 70 || c2 < 70) {
+                        errorMsg.textContent = '字数过少，请继续补充。';
+                        errorMsg.style.display = 'block';
+                        errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                    }
+                    jsPsych.data.addProperties({
+                        prime_response1: q1.value,
+                        prime_response2: q2.value,
+                        prime_chinese_count1: c1,
+                        prime_chinese_count2: c2
+                    });
+                    jsPsych.finishTrial();
+                });
+            }
+        };
+
+        // ---------- 3.5 延迟分心任务 ----------
+        function generateArithmeticItems(count) {
+            const items = [];
+            for (let i = 0; i < count; i++) {
+                let a, b, operator, result;
+                if (Math.random() < 0.5) {
+                    a = Math.floor(Math.random() * 90) + 10;
+                    b = Math.floor(Math.random() * (100 - a)) + 1;
+                    operator = '+';
+                    result = a + b;
+                } else {
+                    a = Math.floor(Math.random() * 90) + 10;
+                    b = Math.floor(Math.random() * a) + 1;
+                    operator = '-';
+                    result = a - b;
+                }
+                const isOdd = result % 2 !== 0;
+                items.push({
+                    stimulus: `${a} ${operator} ${b} = ?`,
+                    result: result,
+                    isOdd: isOdd,
+                    correctResponse: isOdd ? 'ArrowLeft' : 'ArrowRight'
+                });
+            }
+            return items;
+        }
+
+        const arithmeticItems = generateArithmeticItems(40);
+        const arithmeticTrials = arithmeticItems.map((item) => {
+            return {
+                type: jsPsychHtmlKeyboardResponse,
+                stimulus: `
+                    <div style="text-align: center; font-size: 48px; font-weight: bold; margin-top: 80px;">
+                        ${item.stimulus}
+                    </div>
+                    <div style="text-align: center; font-size: 20px; color: #888; margin-top: 30px;">
+                        奇数按 左箭头  |  偶数按 右箭头
+                    </div>
+                `,
+                choices: ['ArrowLeft', 'ArrowRight'],
+                trial_duration: 7000,
+                on_finish: function(data) {
+                    data.correct_answer = item.isOdd ? '奇数' : '偶数';
+                    data.is_correct = (data.response === 'ArrowLeft' && item.isOdd) ||
+                                     (data.response === 'ArrowRight' && !item.isOdd);
+                    data.arithmetic_result = item.result;
+                    if (data.response === null) {
+                        data.is_correct = false;
+                        data.timeout = true;
+                    } else {
+                        data.timeout = false;
+                    }
+                }
+            };
+        });
+
+        const trial_arithmetic_instruction = {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `
+                <div style="text-align: center; font-size: 24px; line-height: 2; max-width: 600px; margin: 0 auto;">
+                    <p>接下来是一个计算任务。</p>
+                    <p>屏幕上会依次出现 40 道两位数加减法题目。</p>
+                    <p>请您在 <strong>7 秒内</strong> 判断结果的 <strong>奇偶性</strong>：</p>
+                    <p style="font-size: 28px;">奇数按 左箭头  &nbsp;&nbsp;|&nbsp;&nbsp; 偶数按 右箭头</p>
+                    <p style="margin-top: 40px; font-weight: bold;">准备好后，请点击下方按钮开始。</p>
+                </div>
+            `,
+            choices: ['开始'],
+            button_html: buttonHtmlTemplate
+        };
+
+        // ---------- 3.6 PANAS 量表 ----------
+        const panasItems = [
+            '活跃的', '恼怒的', '内疚的', '兴奋的', '快乐的',
+            '易怒的', '难过的', '自豪的', '欣喜的', '惊恐的',
+            '紧张的', '感激的', '羞愧的', '害怕的', '充满激情的',
+            '战战兢兢的', '精神充沛的', '兴高采烈的'
+        ];
+        const panasLikertScale = ['几乎没有', '比较少', '中等程度', '比较多', '极其多'];
+        const trial_panas = {
+            type: jsPsychSurveyLikert,
+            questions: panasItems.map(item => ({
+                prompt: item,
+                name: 'panas_' + item,
+                labels: panasLikertScale,
+                required: true
+            })),
+            preamble: '<p style="font-size:18px; font-weight:bold;">下面是一些描述情绪的形容词，请根据您此刻的情绪体验，选择符合您当前情绪感受程度的数字。</p><p style="font-size:14px; color:#888;">每个题目都必须作答。</p>',
+            button_label: '提交'
+        };
+
+        // ---------- 3.7 操纵检验 ----------
+        const checkTopic = isDeathGroup ? '死亡' : '牙痛';
+        const trial_manipulation_check = {
+            type: jsPsychSurveyLikert,
+            questions: [{
+                prompt: `请问在刚才的任务中，您对${checkTopic}的想象与描述，在多大程度上引发你思考${checkTopic}？`,
+                name: 'manipulation_check',
+                labels: ['完全没有引发', '2', '3', '4', '5', '6', '引发了非常多思考'],
+                required: true
+            }],
+            preamble: '<p style="font-size:16px; color:#555;">请根据真实感受回答。</p>',
+            button_label: '提交'
+        };
+
+        // ================================================================
+        // 3.8 Stroop 任务
+        // ================================================================
+        const wordColors = ['红', '绿', '蓝', '黄'];
+        const colorHex = {
+            '红': '#FF0000',
+            '绿': '#00A000',
+            '蓝': '#0000FF',
+            '黄': '#FFAA00'
+        };
+
+        function createStroopItem(isCongruent) {
+            const word = jsPsych.randomization.sampleWithoutReplacement(wordColors, 1)[0];
+            let color = word;
+            if (!isCongruent) {
+                const otherColors = wordColors.filter(c => c !== word);
+                color = jsPsych.randomization.sampleWithoutReplacement(otherColors, 1)[0];
+            }
+            return {
+                word: word,
+                color: color,
+                isCongruent: isCongruent,
+                correctResponse: isCongruent ? 'f' : 'j',
+                stimulus_html: `<span style="color: ${colorHex[color]}; font-size: 60px; font-weight: bold;">${word}</span>`
+            };
+        }
+
+        function generateStroopTrials(total, nCongruent) {
+            const nIncongruent = total - nCongruent;
+            let items = [];
+            for (let i = 0; i < nCongruent; i++) items.push(createStroopItem(true));
+            for (let i = 0; i < nIncongruent; i++) items.push(createStroopItem(false));
+            return jsPsych.randomization.shuffle(items);
+        }
+
+        const nCongruentFormal = isHighLoss ? 40 : 80;
+        const formalTrialsData = generateStroopTrials(120, nCongruentFormal);
+        const practiceTrialsData = generateStroopTrials(20, 10);
+
+        function buildPracticeTrials() {
+            let trials = [];
+            practiceTrialsData.forEach((item) => {
+                const stroopTrial = {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: `
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100%; width: 100%;">
+                            ${item.stimulus_html}
+                        </div>
+                    `,
+                    choices: ['f', 'j'],
+                    trial_duration: 3000,
+                    post_trial_gap: 200,
+                    data: {
+                        stroop_word: item.word,
+                        stroop_color: item.color,
+                        stroop_congruent: item.isCongruent,
+                        stroop_phase: 'practice'
+                    },
+                    on_finish: function(data) {
+                        data.correct = (data.response === item.correctResponse);
+                        data._correctResponse = item.correctResponse;
+                        data._isCorrect = data.correct;
+                    }
+                };
+                const feedbackTrial = {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: function() {
+                        const lastData = jsPsych.data.get().last(1).values()[0];
+                        if (lastData && lastData._isCorrect !== undefined) {
+                            return `<div style="display: flex; justify-content: center; align-items: center; height: 100%; width: 100%;"><div class="feedback-text">${lastData._isCorrect ? '正确' : '错误'}</div></div>`;
+                        }
+                        return '<div style="display: flex; justify-content: center; align-items: center; height: 100%; width: 100%;"><div class="feedback-text">反馈</div></div>';
+                    },
+                    choices: "NO_KEYS",
+                    trial_duration: 500,
+                    post_trial_gap: 0,
+                    data: {
+                        stroop_phase: 'practice_feedback'
+                    }
+                };
+                trials.push(stroopTrial, feedbackTrial);
+            });
+            return trials;
+        }
+
+        function buildFormalTrials() {
+            return formalTrialsData.map((item) => {
+                return {
+                    type: jsPsychHtmlKeyboardResponse,
+                    stimulus: `
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100%; width: 100%;">
+                            ${item.stimulus_html}
+                        </div>
+                    `,
+                    choices: ['f', 'j'],
+                    trial_duration: 3000,
+                    post_trial_gap: 200,
+                    data: {
+                        stroop_word: item.word,
+                        stroop_color: item.color,
+                        stroop_congruent: item.isCongruent,
+                        stroop_phase: 'formal'
+                    },
+                    on_finish: function(data) {
+                        data.correct = (data.response === item.correctResponse);
+                        if (data.response === null) {
+                            data.correct = false;
+                            data.timeout = true;
+                        } else {
+                            data.timeout = false;
+                        }
+                    }
+                };
+            });
+        }
+
+        const trial_stroop_practice_instruction = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <div style="text-align: center; font-size: 22px; line-height: 2; max-width: 650px; margin: 0 auto;">
+                    <p><strong>颜色字体判断任务</strong></p>
+                    <p>屏幕上会呈现一个汉字，其字体颜色可能与词义 <strong>一致</strong>（如红色的“<span style="color:red;font-weight:bold;">红</span>”字），
+                    也可能 <strong>不一致</strong>（如蓝色的“<span style="color:blue;font-weight:bold;">红</span>”字）。</p>
+                    <p style="font-size: 28px; margin-top: 20px;">一致按 <kbd>F</kbd>  &nbsp;&nbsp;|&nbsp;&nbsp; 不一致按 <kbd>J</kbd></p>
+                    <p style="color: #888; margin-top: 20px;">接下来是 <strong>练习阶段</strong>（共20题），会提供正确/错误反馈。</p>
+                    <p style="color: #d9534f; font-weight: bold;">请将左手中指放在 F 键，右手中指放在 J 键。</p>
+                    <p style="margin-top: 30px; font-weight: bold;">准备好后，请按 <kbd>空格键</kbd> 开始练习。</p>
+                </div>
+            `,
+            choices: [' ']
+        };
+
+        const trial_stroop_formal_instruction = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <div style="text-align: center; font-size: 22px; line-height: 2; max-width: 650px; margin: 0 auto;">
+                    <p>练习结束。</p>
+                    <p>接下来进入 <strong>正式实验</strong>（共120题）。</p>
+                    <p style="color: #d9534f; font-weight: bold;">正式实验中不再提供反馈，请集中注意力，尽快准确作答。</p>
+                    <p style="margin-top: 30px; font-weight: bold;">准备好后，请按 <kbd>空格键</kbd> 开始正式任务。</p>
+                </div>
+            `,
+            choices: [' ']
+        };
+
+        const stroopPracticeTrials = buildPracticeTrials();
+        const stroopFormalTrials = buildFormalTrials();
+
+        // ---------- 3.9 情绪评估量表 ----------
+        const emotionItems = ['高兴', '悲伤', '愤怒', '快乐', '害怕', '紧张', '兴奋', '欣喜', '难过', '愉快'];
+        const emotionScale = ['根本没有', '有一点', '适中', '比较强烈', '非常强烈'];
+        const trial_emotion_evaluation = {
+            type: jsPsychSurveyLikert,
+            questions: emotionItems.map(item => ({
+                prompt: item,
+                name: 'emotion_' + item,
+                labels: emotionScale,
+                required: true
+            })),
+            preamble: `<p style="font-size:18px; font-weight:bold;">请选择以下情绪词汇在多大程度上代表了你现在的心情。</p><p style="font-size:14px; color:#888;">每个题目都必须作答。</p>`,
+            button_label: '提交'
+        };
+
+        // ---------- 3.10.1 独裁者游戏 - 第一页 ----------
+        const trial_dictator_instruction = {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `
+                <div style="max-width: 700px; margin: 0 auto; text-align: left; font-size: 18px; line-height: 1.8;">
+                    <p style="font-size:20px; font-weight:bold; text-align:center;">金币分配任务</p>
+                    <p><strong>角色说明</strong></p>
+                    <p>本环节涉及"分配者"与"接受者"两个角色。系统将为您随机匹配一位参与本实验的匿名同学，并随机分配角色。您与对方互不相识，且在实验过程中不会产生任何直接互动。</p>
+                    <p style="margin-top: 30px; text-align: center; font-weight: bold;">请点击下方按钮继续。</p>
+                </div>
+            `,
+            choices: ['继续'],
+            button_html: buttonHtmlTemplate
+        };
+
+        // ---------- 3.10.2 独裁者游戏 - 第二页 ----------
+        const trial_dictator_game = {
+            type: jsPsychHtmlKeyboardResponse,
+            stimulus: `
+                <div style="max-width: 700px; margin: 0 auto; text-align: left;">
+                    <div class="dictator-instruction">
+                        <p><strong>分配任务</strong></p>
+                        <p>您已被系统随机指派为 <strong>"分配者"</strong>，对方为 <strong>"接受者"</strong>。您需要将 <strong>10 枚金币</strong> 在您自己和接受者之间进行分配。您拥有完全的分配权，可给予对方 0 至 10 枚金币中的任意整数数额。接受者无权否决您的方案，只能被动接受。</p>
+                        <p style="color: #d9534f; font-weight: bold;">请注意：您与接受者之间不认识也不会有后续接触，您的分配决策不会受到任何社会性约束。您的分配方案将被严格保密，但分配结果与实际报酬直接挂钩——实验结束后，所有金币将按一定比例折算为人民币，分别支付给您和接受者，作为双方最终的被试费。</p>
+                        <p style="margin-top: 20px; font-weight: bold;">现在，您拥有 10 个金币，您愿意分给"接受者"多少个金币？请在 0 到 10 之间选择：</p>
+                    </div>
+                    <div class="slider-container">
+                        <div class="slider-labels">
+                            <span>0（一个不给）</span>
+                            <span>1</span>
+                            <span>2</span>
+                            <span>3</span>
+                            <span>4</span>
+                            <span>5</span>
+                            <span>6</span>
+                            <span>7</span>
+                            <span>8</span>
+                            <span>9</span>
+                            <span>10（全部给对方）</span>
+                        </div>
+                        <input type="range" id="dictatorSlider" min="0" max="10" step="1" value="5">
+                        <div class="slider-value">当前选择：<span id="sliderValue">5</span> 个金币</div>
+                        <div style="text-align: center;">
+                            <button id="dictatorSubmitBtn" class="jspsych-btn">提交分配方案</button>
+                        </div>
+                    </div>
+                </div>
+            `,
+            choices: [],
+            on_load: function() {
+                const slider = document.getElementById('dictatorSlider');
+                const valueDisplay = document.getElementById('sliderValue');
+                const submitBtn = document.getElementById('dictatorSubmitBtn');
+                slider.addEventListener('input', function() {
+                    valueDisplay.textContent = slider.value;
+                });
+                submitBtn.addEventListener('click', function() {
+                    const offer = parseInt(slider.value, 10);
+                    jsPsych.data.addProperties({ dictator_offer: offer });
+                    jsPsych.finishTrial();
+                });
+            }
+        };
+
+        // ---------- 3.11 结束页面（已整合至 on_finish，此页仅作为兜底） ----------
+        const trial_end = {
+            type: jsPsychHtmlButtonResponse,
+            stimulus: `
+                <div style="text-align: center; font-size: 24px; line-height: 2;">
+                    <p>所有任务已完成！</p>
+                    <p>感谢您的参与！</p>
+                    <p style="font-size: 16px; color: #888;">数据已自动保存，请关闭页面。</p>
+                </div>
+            `,
+            choices: ['关闭'],
+            button_html: buttonHtmlTemplate
+        };
+
+        // ============================================================
+        // 4. 构建完整时间线
+        // ============================================================
+        const timeline = [
+            trial_consent,
+            trial_demographics,
+            trial_alipay,
+            trial_start_reminder,
+            trial_mortalityPrime,
+            trial_arithmetic_instruction,
+            ...arithmeticTrials,
+            trial_panas,
+            trial_manipulation_check,
+            trial_stroop_practice_instruction,
+            ...stroopPracticeTrials,
+            trial_stroop_formal_instruction,
+            ...stroopFormalTrials,
+            trial_emotion_evaluation,
+            trial_dictator_instruction,
+            trial_dictator_game,
+            trial_end
+        ];
+
+        jsPsych.run(timeline);
+    </script>
+</body>
+</html>
