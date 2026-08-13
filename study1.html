@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>研究一</title>
-    <!-- 加载 JATOS 脚本（MindProbe 适配） -->
-    <script src="https://jatos.mindprobe.eu/assets/javascripts/jatos.js"></script>
     <!-- 加载 jsPsych 核心库 -->
     <script src="https://unpkg.com/jspsych@8.3.0/dist/index.browser.js"></script>
     <!-- 加载所需插件 -->
@@ -149,16 +147,23 @@
         }
 
         // ============================================================
-        // 1. 初始化 jsPsych（JATOS 适配版）
+        // 1. 初始化 jsPsych（GitHub Pages 适配版）
         // ============================================================
         const jsPsych = initJsPsych({
             on_finish: function() {
-                // 1. 获取数据，转换成 JSON 格式
-                var resultJson = jsPsych.data.get().json();
-                // 2. 将数据提交给 JATOS
-                jatos.submitResultData(resultJson, jatos.startNextComponent);
-                // 3. 在页面上显示实验结束信息
-                document.body.innerHTML = '<h2>实验结束，感谢您的参与！</h2><p>数据已自动保存，请关闭页面。</p>';
+                // 获取数据，生成 CSV 并自动下载
+                var csvData = jsPsych.data.get().csv();
+                var blob = new Blob(["\uFEFF" + csvData], {type: 'text/csv;charset=utf-8;'});
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = '我的实验数据.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                // 显示结束页面
+                document.body.innerHTML = '<h2>实验结束，感谢您的参与！</h2><p>数据已自动下载，请将下载的CSV文件发回给主试。</p>';
             }
         });
 
@@ -269,7 +274,7 @@
             button_html: buttonHtmlTemplate
         };
 
-        // ---------- 3.4 死亡凸显 / 牙痛 启动任务 ----------
+        // ---------- 3.4 死亡凸显 / 牙痛 启动任务（修订版） ----------
         const topic = isDeathGroup ? '死亡' : '牙痛';
         const question1 = isDeathGroup
             ? '请简要描述当想到"自己死亡"时你的想法和心情（请回答100字左右）：'
@@ -295,18 +300,19 @@
             `,
             choices: [],
             on_load: function() {
-                const q1 = document.getElementById('q1');
-                const q2 = document.getElementById('q2');
-                const count1 = document.getElementById('count1');
-                const count2 = document.getElementById('count2');
-                const errorMsg = document.getElementById('errorMsg');
-                const submitBtn = document.getElementById('submitBtn');
+                // 获取元素并保存到变量中
+                var q1 = document.getElementById('q1');
+                var q2 = document.getElementById('q2');
+                var count1 = document.getElementById('count1');
+                var count2 = document.getElementById('count2');
+                var errorMsg = document.getElementById('errorMsg');
+                var submitBtn = document.getElementById('submitBtn');
 
                 function updateCounts() {
-                    const c1 = countChineseChars(q1.value);
-                    const c2 = countChineseChars(q2.value);
-                    count1.textContent = `中文字数：${c1}`;
-                    count2.textContent = `中文字数：${c2}`;
+                    var c1 = countChineseChars(q1.value);
+                    var c2 = countChineseChars(q2.value);
+                    count1.textContent = '中文字数：' + c1;
+                    count2.textContent = '中文字数：' + c2;
                     errorMsg.style.display = 'none';
                 }
 
@@ -315,20 +321,32 @@
                 updateCounts();
 
                 submitBtn.addEventListener('click', function() {
-                    const c1 = countChineseChars(q1.value);
-                    const c2 = countChineseChars(q2.value);
+                    // 重新获取最新的值（确保获取到当前输入）
+                    var val1 = q1.value;
+                    var val2 = q2.value;
+                    var c1 = countChineseChars(val1);
+                    var c2 = countChineseChars(val2);
+
+                    // 调试输出（可在浏览器控制台查看）
+                    console.log('启动任务回答1：', val1);
+                    console.log('启动任务回答2：', val2);
+                    console.log('字数1：', c1, '字数2：', c2);
+
                     if (c1 < 70 || c2 < 70) {
                         errorMsg.textContent = '字数过少，请继续补充。';
                         errorMsg.style.display = 'block';
                         errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         return;
                     }
+
+                    // 保存数据
                     jsPsych.data.addProperties({
-                        prime_response1: q1.value,
-                        prime_response2: q2.value,
+                        prime_response1: val1,
+                        prime_response2: val2,
                         prime_chinese_count1: c1,
                         prime_chinese_count2: c2
                     });
+
                     jsPsych.finishTrial();
                 });
             }
@@ -666,14 +684,14 @@
             }
         };
 
-        // ---------- 3.11 结束页面（已整合至 on_finish，此页仅作为兜底） ----------
+        // ---------- 3.11 结束页面（兜底） ----------
         const trial_end = {
             type: jsPsychHtmlButtonResponse,
             stimulus: `
                 <div style="text-align: center; font-size: 24px; line-height: 2;">
                     <p>所有任务已完成！</p>
                     <p>感谢您的参与！</p>
-                    <p style="font-size: 16px; color: #888;">数据已自动保存，请关闭页面。</p>
+                    <p style="font-size: 16px; color: #888;">请下载数据文件发回给主试。</p>
                 </div>
             `,
             choices: ['关闭'],
