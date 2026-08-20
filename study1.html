@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>研究一</title>
+    <title>研究一：死亡凸显与亲社会行为</title>
     <!-- 加载 jsPsych 核心库 -->
     <script src="https://unpkg.com/jspsych@8.3.0/dist/index.browser.js"></script>
     <!-- 加载所需插件 -->
@@ -32,7 +32,7 @@
             border-radius: 6px;
             font-family: inherit;
             resize: vertical;
-            min-height: 100px;
+            min-height: 80px;
             margin: 8px 0 4px 0;
             box-sizing: border-box;
         }
@@ -62,16 +62,36 @@
             border-radius: 6px;
             max-width: 600px;
         }
-        #submitBtn {
-            margin-top: 10px;
+        .news-content {
+            background: #f5f7fa;
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+            margin: 12px 0 20px 0;
+            max-width: 650px;
+            border-left: 4px solid #4a90d9;
         }
-        .jspsych-survey-likert-statement {
-            margin-bottom: 0.5em;
+        .dictator-instruction {
+            text-align: left;
+            max-width: 650px;
+            margin: 0 auto;
+            font-size: 18px;
+            line-height: 1.8;
         }
-        .feedback-text {
-            font-size: 48px;
-            color: black;
-            font-weight: bold;
+        .dictator-instruction p {
+            margin: 12px 0;
+        }
+        .dictator-instruction strong {
+            color: #333;
+        }
+        .dictator-instruction .highlight-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 16px 0;
         }
         .slider-container {
             max-width: 600px;
@@ -120,18 +140,20 @@
             color: #4a90d9;
             margin: 10px 0;
         }
-        .dictator-instruction {
-            text-align: left;
-            max-width: 650px;
-            margin: 0 auto;
-            font-size: 18px;
-            line-height: 1.8;
+        .feedback-text {
+            font-size: 48px;
+            color: black;
+            font-weight: bold;
         }
-        .dictator-instruction p {
-            margin: 12px 0;
-        }
-        .dictator-instruction strong {
-            color: #333;
+        /* 新增按键样式 */
+        kbd {
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            padding: 2px 8px;
+            border: 1px solid #ccc;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            font-family: monospace;
+            font-size: 0.9em;
         }
     </style>
 </head>
@@ -151,7 +173,6 @@
         // ============================================================
         const jsPsych = initJsPsych({
             on_finish: function() {
-                // 获取数据，生成 CSV 并自动下载
                 var csvData = jsPsych.data.get().csv();
                 var blob = new Blob(["\uFEFF" + csvData], {type: 'text/csv;charset=utf-8;'});
                 var url = window.URL.createObjectURL(blob);
@@ -162,7 +183,6 @@
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
-                // 显示结束页面
                 document.body.innerHTML = '<h2>实验结束，感谢您的参与！</h2><p>数据已自动下载，请将下载的CSV文件发回给主试。</p>';
             }
         });
@@ -210,20 +230,19 @@
             button_html: buttonHtmlTemplate
         };
 
-        // ---------- 3.2 人口学变量 ----------
+        // ---------- 3.2 人口学变量（已删除月收入） ----------
         const trial_demographics = {
             type: jsPsychSurveyMultiChoice,
             questions: [
                 { prompt: '1. 您的性别：', name: 'gender', options: ['男', '女'], required: true },
                 { prompt: '2. 您的年龄：', name: 'age', options: ['18岁以下', '18-25岁', '26-35岁', '36-45岁', '46-55岁', '56岁以上'], required: true },
                 { prompt: '3. 您的受教育程度（最高学历）：', name: 'education', options: ['初中及以下', '高中/中专/职高', '大专', '本科', '硕士及以上'], required: true },
-                { prompt: '4. 请问您18岁以前，大部分时间长期生活、成长的地方是：', name: 'hometown', options: ['农村或乡镇', '县城、地级市或以上城市'], required: true },
-                { prompt: '5. 请问您个人的月均可支配金额大概是多少？（您每月实际可自由支配的收入/生活费总额）', name: 'monthly_income', options: ['1000元及以下', '1001-3000元', '3001-5000元', '5001-8000元', '8001-10000元', '10001-15000元', '15001元及以上'], required: true }
+                { prompt: '4. 请问您18岁以前，大部分时间长期生活、成长的地方是：', name: 'hometown', options: ['农村或乡镇', '县城、地级市或以上城市'], required: true }
             ],
             button_label: '提交'
         };
 
-        // ---------- 3.2.5 支付宝绑定手机号（自定义验证） ----------
+        // ---------- 3.2.5 支付宝绑定手机号 ----------
         const trial_alipay = {
             type: jsPsychHtmlKeyboardResponse,
             stimulus: `
@@ -239,7 +258,6 @@
                 const input = document.getElementById('alipayInput');
                 const errorDiv = document.getElementById('alipayError');
                 const submitBtn = document.getElementById('alipaySubmitBtn');
-
                 submitBtn.addEventListener('click', function() {
                     const phone = input.value.trim();
                     if (!/^\d{11}$/.test(phone)) {
@@ -247,13 +265,10 @@
                         errorDiv.textContent = '请输入有效的11位手机号码（仅数字）。';
                         return;
                     }
-                    jsPsych.data.addProperties({
-                        alipay_phone: phone
-                    });
+                    jsPsych.data.addProperties({ alipay_phone: phone });
                     errorDiv.style.display = 'none';
                     jsPsych.finishTrial();
                 });
-
                 input.addEventListener('input', function() {
                     errorDiv.style.display = 'none';
                 });
@@ -274,24 +289,63 @@
             button_html: buttonHtmlTemplate
         };
 
-        // ---------- 3.4 死亡凸显 / 牙痛 启动任务（修订版） ----------
-        const topic = isDeathGroup ? '死亡' : '牙痛';
-        const question1 = isDeathGroup
-            ? '请简要描述当想到"自己死亡"时你的想法和心情（请回答100字左右）：'
-            : '请简要描述当想到"自己牙痛"时你的想法和心情（请回答100字左右）：';
-        const question2 = isDeathGroup
-            ? '请根据你的直觉，具体描述"在死亡过程中，你身体的感受"以及"当死亡后，你身体的变化"（请回答100字左右）：'
-            : '请根据你的直觉，具体描述"在牙痛过程中，你身体的感受"以及"当牙痛时，你身体的变化"（请回答100字左右）：';
+        // ================================================================
+        // 3.4 死亡凸显启动任务（新闻阅读 + 2个问题）
+        // ================================================================
+        const deathNews = `
+            2026年8月10日，受第10号台风"美莎克"及持续极端强降雨影响，广西多地突发特大洪灾，并引发水库溃口。洪水在深夜瞬间倾泻而下，顺流冲击了下游多个村庄与居民区，大量房屋被瞬间吞噬和淹没。截至今日12时，灾区已确认有39人不幸遇难死亡，另有9人彻底失联。搜救人员在现场进行搜救工作，陆续发现遇难者遗体，其中包括多名因深夜洪水来得太快、来不及逃生而遇难的村民，他们因窒息或强力撞击而瞬间失去生命体征。由于仍有人员失联，且现场环境极其恶劣，废墟与深水区域中失联人员的生存希望已经极其渺茫。目前，相关部门正在全力开展遇难者遗体的身份鉴定与善后工作。
+        `;
+
+        const toothNews = `
+            近日，中国首例由机器人主刀完成的口腔手术完成，患者是一名西安女性。这项技术由武汉大学口腔医院和北航大学机器人研究所一起发明，用以解决农村牙医短缺和高频的手术失误问题。牙齿移植采用3D打印技术，误差控制在0.2-0.3mm，这正符合了这类手术的误差范围。首先，患者需要做一个CT扫描。然后，机器人被预先设计好程序，并根据具体的指数来执行手术，包括植入牙齿的角度和深度。接着，当医生在房间内执行操作时，机器人根据预先编好的程序自动地把两颗牙齿移植到患者口中。最后，机器人根据患者自身手术中微小的移动做出调整。目前，每年全世界有超过1500万例的种植牙手术，中国不是唯一引进全自动牙科技术的国家。
+        `;
+
+        const deathQuestions = [
+            {
+                prompt: '(1) 此次洪灾中死亡人数是多少？',
+                name: 'death_news_q1',
+                rows: 1,
+                columns: 20,
+                required: true
+            },
+            {
+                prompt: '(2) 请简要描述遇难现场的场景，并写出你看到此则新闻时的情绪和感受（请回答100字左右）：',
+                name: 'death_news_q2',
+                rows: 4,
+                columns: 60,
+                required: true
+            }
+        ];
+
+        const toothQuestions = [
+            {
+                prompt: '(1) 该牙科手术包含几个环节？',
+                name: 'tooth_news_q1',
+                rows: 1,
+                columns: 20,
+                required: true
+            },
+            {
+                prompt: '(2) 请简要描述牙科手术流程，并写出你看到此则新闻时的情绪和感受（请回答100字左右）：',
+                name: 'tooth_news_q2',
+                rows: 4,
+                columns: 60,
+                required: true
+            }
+        ];
+
+        const currentNews = isDeathGroup ? deathNews : toothNews;
+        const currentQuestions = isDeathGroup ? deathQuestions : toothQuestions;
 
         const trial_mortalityPrime = {
             type: jsPsychHtmlKeyboardResponse,
             stimulus: `
                 <div style="max-width: 650px; margin: 0 auto; text-align: left;">
-                    <p style="font-size:18px; color:#333;"><strong>任务说明：</strong>请认真想象并回答以下关于${topic}的问题。</p>
-                    <div class="question-label">${question1}</div>
-                    <textarea id="q1" class="custom-textarea" placeholder="请输入您的回答..."></textarea>
-                    <div id="count1" class="char-count-display">中文字数：0</div>
-                    <div class="question-label">${question2}</div>
+                    <p style="font-size:18px; color:#333;"><strong>任务说明：</strong>请认真阅读以下新闻，并回答后面的问题。</p>
+                    <div class="news-content">${currentNews}</div>
+                    <div class="question-label">${currentQuestions[0].prompt}</div>
+                    <input type="text" id="q1" class="custom-textarea" placeholder="请输入您的回答..." style="min-height:40px; height:40px; padding:8px 12px;">
+                    <div class="question-label" style="margin-top:20px;">${currentQuestions[1].prompt}</div>
                     <textarea id="q2" class="custom-textarea" placeholder="请输入您的回答..."></textarea>
                     <div id="count2" class="char-count-display">中文字数：0</div>
                     <div id="errorMsg" class="error-msg"></div>
@@ -300,51 +354,47 @@
             `,
             choices: [],
             on_load: function() {
-                // 获取元素并保存到变量中
-                var q1 = document.getElementById('q1');
-                var q2 = document.getElementById('q2');
-                var count1 = document.getElementById('count1');
-                var count2 = document.getElementById('count2');
-                var errorMsg = document.getElementById('errorMsg');
-                var submitBtn = document.getElementById('submitBtn');
+                const q1 = document.getElementById('q1');
+                const q2 = document.getElementById('q2');
+                const count2 = document.getElementById('count2');
+                const errorMsg = document.getElementById('errorMsg');
+                const submitBtn = document.getElementById('submitBtn');
 
                 function updateCounts() {
-                    var c1 = countChineseChars(q1.value);
-                    var c2 = countChineseChars(q2.value);
-                    count1.textContent = '中文字数：' + c1;
-                    count2.textContent = '中文字数：' + c2;
+                    const c2 = countChineseChars(q2.value);
+                    count2.textContent = `中文字数：${c2}`;
                     errorMsg.style.display = 'none';
                 }
 
-                q1.addEventListener('input', updateCounts);
                 q2.addEventListener('input', updateCounts);
                 updateCounts();
 
                 submitBtn.addEventListener('click', function() {
-                    // 重新获取最新的值（确保获取到当前输入）
-                    var val1 = q1.value;
-                    var val2 = q2.value;
-                    var c1 = countChineseChars(val1);
-                    var c2 = countChineseChars(val2);
+                    const val1 = q1.value.trim();
+                    const val2 = q2.value;
+                    const c2 = countChineseChars(val2);
 
-                    // 调试输出（可在浏览器控制台查看）
-                    console.log('启动任务回答1：', val1);
-                    console.log('启动任务回答2：', val2);
-                    console.log('字数1：', c1, '字数2：', c2);
+                    console.log('新闻回答1：', val1);
+                    console.log('新闻回答2：', val2);
+                    console.log('回答2字数：', c2);
 
-                    if (c1 < 70 || c2 < 70) {
-                        errorMsg.textContent = '字数过少，请继续补充。';
+                    if (!val1) {
+                        errorMsg.textContent = '请回答第(1)题。';
+                        errorMsg.style.display = 'block';
+                        errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                    }
+                    if (c2 < 70) {
+                        errorMsg.textContent = '第(2)题字数过少（至少70字），请继续补充。';
                         errorMsg.style.display = 'block';
                         errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         return;
                     }
 
-                    // 保存数据
                     jsPsych.data.addProperties({
-                        prime_response1: val1,
-                        prime_response2: val2,
-                        prime_chinese_count1: c1,
-                        prime_chinese_count2: c2
+                        news_response1: val1,
+                        news_response2: val2,
+                        news_chinese_count2: c2
                     });
 
                     jsPsych.finishTrial();
@@ -352,7 +402,7 @@
             }
         };
 
-        // ---------- 3.5 延迟分心任务 ----------
+        // ---------- 3.5 延迟分心任务（修改了按键提示为 ←键 和 →键） ----------
         function generateArithmeticItems(count) {
             const items = [];
             for (let i = 0; i < count; i++) {
@@ -388,7 +438,7 @@
                         ${item.stimulus}
                     </div>
                     <div style="text-align: center; font-size: 20px; color: #888; margin-top: 30px;">
-                        奇数按 左箭头  |  偶数按 右箭头
+                        奇数按 <kbd>←</kbd>键 &nbsp;&nbsp;|&nbsp;&nbsp; 偶数按 <kbd>→</kbd>键
                     </div>
                 `,
                 choices: ['ArrowLeft', 'ArrowRight'],
@@ -408,6 +458,7 @@
             };
         });
 
+        // 指导语也相应修改
         const trial_arithmetic_instruction = {
             type: jsPsychHtmlButtonResponse,
             stimulus: `
@@ -415,7 +466,7 @@
                     <p>接下来是一个计算任务。</p>
                     <p>屏幕上会依次出现 40 道两位数加减法题目。</p>
                     <p>请您在 <strong>7 秒内</strong> 判断结果的 <strong>奇偶性</strong>：</p>
-                    <p style="font-size: 28px;">奇数按 左箭头  &nbsp;&nbsp;|&nbsp;&nbsp; 偶数按 右箭头</p>
+                    <p style="font-size: 28px;">奇数按 <kbd>←</kbd>键 &nbsp;&nbsp;|&nbsp;&nbsp; 偶数按 <kbd>→</kbd>键</p>
                     <p style="margin-top: 40px; font-weight: bold;">准备好后，请点击下方按钮开始。</p>
                 </div>
             `,
@@ -448,9 +499,9 @@
         const trial_manipulation_check = {
             type: jsPsychSurveyLikert,
             questions: [{
-                prompt: `请问在刚才的任务中，您对${checkTopic}的想象与描述，在多大程度上引发你思考${checkTopic}？`,
+                prompt: `请您回忆一下，刚才的阅读任务在多大程度上引发了你对${checkTopic}的思考？`,
                 name: 'manipulation_check',
-                labels: ['完全没有引发', '2', '3', '4', '5', '6', '引发了非常多思考'],
+                labels: ['完全没有', '2', '3', '4', '5', '6', '非常强烈'],
                 required: true
             }],
             preamble: '<p style="font-size:16px; color:#555;">请根据真实感受回答。</p>',
@@ -620,14 +671,18 @@
             button_label: '提交'
         };
 
-        // ---------- 3.10.1 独裁者游戏 - 第一页 ----------
+        // ================================================================
+        // 3.10 独裁者游戏（捐给受灾群众）
+        // ================================================================
+
         const trial_dictator_instruction = {
             type: jsPsychHtmlButtonResponse,
             stimulus: `
                 <div style="max-width: 700px; margin: 0 auto; text-align: left; font-size: 18px; line-height: 1.8;">
-                    <p style="font-size:20px; font-weight:bold; text-align:center;">金币分配任务</p>
-                    <p><strong>角色说明</strong></p>
-                    <p>本环节涉及"分配者"与"接受者"两个角色。系统将为您随机匹配一位参与本实验的匿名同学，并随机分配角色。您与对方互不相识，且在实验过程中不会产生任何直接互动。</p>
+                    <p style="font-size:20px; font-weight:bold; text-align:center;">捐款任务</p>
+                    <p>近期，广西多地因特大洪灾遭受严重损失，造成重大人员伤亡和财产损失。灾区的救援和重建工作正在紧张进行中，受灾群众急需社会各界援助。</p>
+                    <p style="margin-top: 20px;">现在，您已获得 <strong>10 个代币</strong> 作为实验报酬。您需要决定：您愿意将其中多少个代币捐给此次受灾地区？</p>
+                    <p style="color: #d9534f; font-size: 16px; margin-top: 10px;">⚠️ 您捐出的代币将从您的实验报酬中扣除，剩余部分将折合成人民币如数发放给您。</p>
                     <p style="margin-top: 30px; text-align: center; font-weight: bold;">请点击下方按钮继续。</p>
                 </div>
             `,
@@ -635,20 +690,27 @@
             button_html: buttonHtmlTemplate
         };
 
-        // ---------- 3.10.2 独裁者游戏 - 第二页 ----------
         const trial_dictator_game = {
             type: jsPsychHtmlKeyboardResponse,
             stimulus: `
                 <div style="max-width: 700px; margin: 0 auto; text-align: left;">
                     <div class="dictator-instruction">
-                        <p><strong>分配任务</strong></p>
-                        <p>您已被系统随机指派为 <strong>"分配者"</strong>，对方为 <strong>"接受者"</strong>。您需要将 <strong>10 枚金币</strong> 在您自己和接受者之间进行分配。您拥有完全的分配权，可给予对方 0 至 10 枚金币中的任意整数数额。接受者无权否决您的方案，只能被动接受。</p>
-                        <p style="color: #d9534f; font-weight: bold;">请注意：您与接受者之间不认识也不会有后续接触，您的分配决策不会受到任何社会性约束。您的分配方案将被严格保密，但分配结果与实际报酬直接挂钩——实验结束后，所有金币将按一定比例折算为人民币，分别支付给您和接受者，作为双方最终的被试费。</p>
-                        <p style="margin-top: 20px; font-weight: bold;">现在，您拥有 10 个金币，您愿意分给"接受者"多少个金币？请在 0 到 10 之间选择：</p>
+                        <p><strong>请做出您的捐赠决定</strong></p>
+                        <p>您拥有 <strong>10 个代币</strong>，请选择您愿意捐出的数量：</p>
+                        <div class="highlight-box">
+                            <p style="margin:0; font-size:16px;">
+                                <strong>⚠️ 请注意：</strong>
+                                <br>• 您捐出的代币将从您的实验报酬中扣除。
+                                <br>• 剩余部分将如数发放给您作为最终的实验报酬。
+                                <br>• 所有捐款将以"本研究全体参与者"的名义统一汇至官方救灾账户。
+                                <br>• 您的决策结果将严格保密。
+                            </p>
+                        </div>
+                        <p style="font-weight: bold; margin-top: 20px;">您愿意捐出多少代币？请在 0 到 10 之间选择：</p>
                     </div>
                     <div class="slider-container">
                         <div class="slider-labels">
-                            <span>0（一个不给）</span>
+                            <span>0（全部留给自己）</span>
                             <span>1</span>
                             <span>2</span>
                             <span>3</span>
@@ -658,12 +720,12 @@
                             <span>7</span>
                             <span>8</span>
                             <span>9</span>
-                            <span>10（全部给对方）</span>
+                            <span>10（全部捐出）</span>
                         </div>
                         <input type="range" id="dictatorSlider" min="0" max="10" step="1" value="5">
-                        <div class="slider-value">当前选择：<span id="sliderValue">5</span> 个金币</div>
+                        <div class="slider-value">当前选择：<span id="sliderValue">5</span> 个代币</div>
                         <div style="text-align: center;">
-                            <button id="dictatorSubmitBtn" class="jspsych-btn">提交分配方案</button>
+                            <button id="dictatorSubmitBtn" class="jspsych-btn">提交捐赠决定</button>
                         </div>
                     </div>
                 </div>
@@ -684,7 +746,7 @@
             }
         };
 
-        // ---------- 3.11 结束页面（兜底） ----------
+        // ---------- 3.11 结束页面 ----------
         const trial_end = {
             type: jsPsychHtmlButtonResponse,
             stimulus: `
